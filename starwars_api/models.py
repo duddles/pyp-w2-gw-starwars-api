@@ -33,16 +33,7 @@ class BaseModel(object):
         # import ipdb; ipdb.set_trace()
 
         return globals()[cls.QUERY_SET_NAME]()
-        # return eval(cls.QUERY_SET_NAME)
-        #return cls.QUERY_SET_NAME()
-        #print cls
-        #if isinstance(cls, People):
-            #return PeopleQuerySet()
-        #return FilmsQuerySet()
-        #json_data =getattr(api_client, 'get_' + cls.RESOURCE_NAME)()
-        # this is a dict with count, next, previous, results
-        # i think we want to make a PeopleQuerySet or FilmQuerySet 
-        #queryset = # but I am not sure how to call it...
+       
         
 class People(BaseModel):
     """Representing a single person"""
@@ -53,11 +44,8 @@ class People(BaseModel):
         super(People, self).__init__(json_data)
 
     def __repr__(self):
-        try: 
-            return 'Person: {0}'.format(self.name)
-        except UnicodeEncodeError:
-            return 'Name with unicode error'
-
+        self.name = self.name.encode('utf8', 'ignore')
+        return 'Person: {0}'.format(self.name)
 
 class Films(BaseModel):
     RESOURCE_NAME = 'films'
@@ -67,16 +55,15 @@ class Films(BaseModel):
         super(Films, self).__init__(json_data)
 
     def __repr__(self):
-        try:
-            return 'Film: {0}'.format(self.title)
-        except UnicodeEncodeError:
-            return 'Name with unicode error'
-
+        self.title = self.title.encode('utf8', 'ignore')
+        return 'Film: {0}'.format(self.title)#.encode('utf8', 'ignore')
+        
 class BaseQuerySet(object):
 
     def __init__(self):
-        self.current_resource = 0
+        self.current_resource = 1
         self.max_count = self.count()
+        self.found = 0
 
     def __iter__(self):
         return self
@@ -86,14 +73,17 @@ class BaseQuerySet(object):
         Must handle requests to next pages in SWAPI when objects in the current
         page were all consumed.
         """
-        if self.current_resource >= self.max_count:
+        if self.found >= self.max_count:
             raise StopIteration
-        self.current_resource += 1
+
         try:  
             json_data = getattr(api_client, 'get_' + self.RESOURCE_NAME)(self.current_resource)
+            self.current_resource += 1
+            self.found += 1
             return self.parent(json_data)
         except SWAPIClientError:            
-            pass
+            self.current_resource += 1
+            return next(self)
             
     next = __next__
 
