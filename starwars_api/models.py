@@ -11,7 +11,7 @@ class BaseModel(object):
         Dynamically assign all attributes in `json_data` as instance
         attributes of the Model.
         """
-        for key, value in json_data.iteritems():
+        for key, value in json_data.items():
             setattr(self, key, value)
 
     @classmethod
