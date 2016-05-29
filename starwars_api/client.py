@@ -69,3 +69,7 @@ class SWAPIClient(object):
         if film_id:
             return self._get_swapi('/api/films/{}'.format(film_id))
         return self._get_swapi('/api/films', **params)
+      
+    def get_page(self, current_url):
+        current_url = current_url.split('http://swapi.co')[1]
+        return self._get_swapi(current_url)
