@@ -46,8 +46,8 @@ class People(BaseModel):
     RESOURCE_NAME = 'people' # used to call get_people() on api
     QUERY_SET_NAME = 'PeopleQuerySet' # used to access the QuerySet class
 
-    def __init__(self, json_data):
-         super(People, self).__init__(json_data)
+    # def __init__(self, json_data):
+    #      super(People, self).__init__(json_data)
 
     def __repr__(self):
         # use encode to deal with utf characters like in Padmé Amidala
@@ -58,8 +58,8 @@ class Films(BaseModel):
     RESOURCE_NAME = 'films'
     QUERY_SET_NAME = 'FilmsQuerySet'
 
-    def __init__(self, json_data):
-         super(Films, self).__init__(json_data)
+    # def __init__(self, json_data):
+    #      super(Films, self).__init__(json_data)
 
     def __repr__(self):
         self.title = self.title.encode('utf8', 'ignore')
@@ -68,7 +68,7 @@ class Films(BaseModel):
 class BaseQuerySet(object):
     
     def __init__(self):
-        self.object_index = 1 # index counter to access each object 1 at a time
+        self.object_index = 0 # index counter to access each object 1 at a time
         self.n_objects = self.count() # the # of objects we need to find
         self.found = 0 # keep track of how many we have found 
         # we used found to account for missing obejcts
@@ -84,14 +84,13 @@ class BaseQuerySet(object):
         """
         if self.found >= self.n_objects: # end when we have found all objects
             raise StopIteration
-
+            
+        self.object_index += 1
         try:  
             current_object = self.parent.get(self.object_index)
-            self.object_index += 1
             self.found += 1
             return current_object
         except SWAPIClientError: # in case of a missing object          
-            self.object_index += 1
             return next(self) # continue to the next object
             
     next = __next__
@@ -126,6 +125,11 @@ class FilmsQuerySet(BaseQuerySet):
     def __repr__(self):
         return 'FilmsQuerySet: {0} objects'.format(str(len(self.objects)))
         
+def quicktest():
+    page = api_client.get_page('http://swapi.co/api/?page=2')
+    print page
+    raw_input()
+        
 # I tried an alternate way to go page by page
 # It utilizes a function get_page which I added to client.py
 # It works with the actual SWAPI but on the test case stays stuck on page 1
@@ -135,7 +139,7 @@ class FilmsQuerySet(BaseQuerySet):
 class BaseQuerySet(object):
 
     def __init__(self):
-        self.current_url = 'http://swapi.co/api/{}/?page=2'.format(self.RESOURCE_NAME)
+        self.current_url = 'http://swapi.co/api/{}/?page=1'.format(self.RESOURCE_NAME)
         self.get_page_results()
 
     def __iter__(self):
@@ -145,7 +149,6 @@ class BaseQuerySet(object):
         try:
             current_object = self.parent(self.results_attr[self.results_index])
             # ie People(json)
-            print current_object.name
             self.results_index += 1
             return current_object
         except IndexError:
