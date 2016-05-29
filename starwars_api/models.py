@@ -125,11 +125,6 @@ class FilmsQuerySet(BaseQuerySet):
     def __repr__(self):
         return 'FilmsQuerySet: {0} objects'.format(str(len(self.objects)))
         
-def quicktest():
-    page = api_client.get_page('http://swapi.co/api/?page=2')
-    print page
-    raw_input()
-        
 # I tried an alternate way to go page by page
 # It utilizes a function get_page which I added to client.py
 # It works with the actual SWAPI but on the test case stays stuck on page 1
