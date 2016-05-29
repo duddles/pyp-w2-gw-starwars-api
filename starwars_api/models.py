@@ -77,9 +77,81 @@ class Films(BaseModel):
     def __repr__(self):
         self.title = self.title.encode('utf8', 'ignore')
         return 'Film: {0}'.format(self.title)
-        
-# the following section iterates with individual API calls       
+
+# This loads the objects page by page as an iterable
 class BaseQuerySet(object):
+
+    def __init__(self):
+        self.page_index = 1
+        self.get_page_results()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        try:
+            current_object = self.parent(self.results_attr[self.results_index])
+            # ie People(json)
+            self.results_index += 1
+            return current_object
+        except IndexError: # We have consumed all the objects on the page
+            if not self.next_attr: # Stop if no more next pages to find
+                raise StopIteration
+            # the next_attr will look like http://swapi.co/api/people/?page=8
+            # we just want to grab the page number from the end
+            self.page_index = self.next_attr.split('page=')[1]
+            self.get_page_results()
+            return next(self)
+            
+    def get_page_results(self):
+        try:
+            #page_data = self.parent.get(**{'page': self.page_index})
+            # dont understand why above line fails - something about **parameter passing perhaps?
+            page_data = getattr(api_client, 'get_' + self.RESOURCE_NAME)(**{'page': self.page_index})
+        except SWAPIClientError: # if page has {'detail':'not found'}
+            raise StopIteration
+        for key, value in page_data.items():
+            setattr(self, key + '_attr', value)
+            # set the 4 attributes (next, previous, count, results)
+            # I added '_attr' to avoid confusion with built in next
+        self.results_index = 0 # reset the index so it was start a new page at 0
+        
+    next = __next__
+    
+    def count(self):
+        """
+        Returns the total count of objects of current model.
+        If the counter is not persisted as a QuerySet instance attr,
+        a new request is performed to the API in order to get it.
+        """
+        # for example: api_client.get_people()['count']
+        return getattr(api_client, 'get_{}'.format(self.RESOURCE_NAME))()['count'] 
+        
+class PeopleQuerySet(BaseQuerySet):
+    RESOURCE_NAME = 'people'
+
+    def __init__(self):
+        self.parent = People
+        super(PeopleQuerySet, self).__init__()
+
+    def __repr__(self):
+        return 'PeopleQuerySet: {0} objects'.format(str(len(self.objects)))
+
+
+class FilmsQuerySet(BaseQuerySet):
+    RESOURCE_NAME = 'films'
+
+    def __init__(self):
+        self.parent = Films
+        super(FilmsQuerySet, self).__init__()
+
+    def __repr__(self):
+        return 'FilmsQuerySet: {0} objects'.format(str(len(self.objects)))
+
+# Below are 2 other methods of doing the iterable
+# Uncomment them and place them about PeopleQuerySet, FilmsQuerySet to run
+# the following section iterates with individual API calls       
+'''class BaseQuerySet(object):
     
     def __init__(self):
         self.object_index = 0 # index counter to access each object 1 at a time
@@ -117,7 +189,7 @@ class BaseQuerySet(object):
         """
         # for example: api_client.get_people()['count']
         return getattr(api_client, 'get_{}'.format(self.RESOURCE_NAME))()['count'] 
-
+'''
 # I tried an alternate way to go page by page
 # It utilizes a function get_page which I added to client.py
 # It works with the actual SWAPI but on the test case stays stuck on page 1
@@ -165,23 +237,3 @@ class BaseQuerySet(object):
         # for example: api_client.get_people()['count']
         return getattr(api_client, 'get_{}'.format(self.RESOURCE_NAME))()['count'] 
 '''
-class PeopleQuerySet(BaseQuerySet):
-    RESOURCE_NAME = 'people'
-
-    def __init__(self):
-        self.parent = People
-        super(PeopleQuerySet, self).__init__()
-
-    def __repr__(self):
-        return 'PeopleQuerySet: {0} objects'.format(str(len(self.objects)))
-
-
-class FilmsQuerySet(BaseQuerySet):
-    RESOURCE_NAME = 'films'
-
-    def __init__(self):
-        self.parent = Films
-        super(FilmsQuerySet, self).__init__()
-
-    def __repr__(self):
-        return 'FilmsQuerySet: {0} objects'.format(str(len(self.objects)))
