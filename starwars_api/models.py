@@ -46,25 +46,39 @@ class People(BaseModel):
     RESOURCE_NAME = 'people' # used to call get_people() on api
     QUERY_SET_NAME = 'PeopleQuerySet' # used to access the QuerySet class
 
-    # def __init__(self, json_data):
-    #      super(People, self).__init__(json_data)
+    def __init__(self, json_data):
+          super(People, self).__init__(json_data)
+          #self.get_film_titles()
 
     def __repr__(self):
         # use encode to deal with utf characters like in Padmé Amidala
         self.name = self.name.encode('utf8', 'ignore')
         return 'Person: {0}'.format(self.name)
-
+    
+    '''
+    def get_film_titles(self):
+        # converts list of urls to film titles
+        # works with real SWAPI but doesn't work with test... very frustrated with test
+        self.film_titles = []
+        for film in self.films:
+            film_object = Films.get(film.split('/')[-2])
+            self.film_titles.append(film_object.title.encode('ascii'))
+        self.films = self.film_titles
+    '''
+        
+    
 class Films(BaseModel):
     RESOURCE_NAME = 'films'
     QUERY_SET_NAME = 'FilmsQuerySet'
 
-    # def __init__(self, json_data):
+    #def __init__(self, json_data):
     #      super(Films, self).__init__(json_data)
 
     def __repr__(self):
         self.title = self.title.encode('utf8', 'ignore')
         return 'Film: {0}'.format(self.title)
         
+# the following section iterates with individual API calls       
 class BaseQuerySet(object):
     
     def __init__(self):
@@ -103,28 +117,7 @@ class BaseQuerySet(object):
         """
         # for example: api_client.get_people()['count']
         return getattr(api_client, 'get_{}'.format(self.RESOURCE_NAME))()['count'] 
-            
-class PeopleQuerySet(BaseQuerySet):
-    RESOURCE_NAME = 'people'
 
-    def __init__(self):
-        self.parent = People
-        super(PeopleQuerySet, self).__init__()
-
-    def __repr__(self):
-        return 'PeopleQuerySet: {0} objects'.format(str(len(self.objects)))
-
-
-class FilmsQuerySet(BaseQuerySet):
-    RESOURCE_NAME = 'films'
-
-    def __init__(self):
-        self.parent = Films
-        super(FilmsQuerySet, self).__init__()
-
-    def __repr__(self):
-        return 'FilmsQuerySet: {0} objects'.format(str(len(self.objects)))
-        
 # I tried an alternate way to go page by page
 # It utilizes a function get_page which I added to client.py
 # It works with the actual SWAPI but on the test case stays stuck on page 1
@@ -162,4 +155,33 @@ class BaseQuerySet(object):
         self.results_index = 0
         
     next = __next__
+    
+    def count(self):
+        """
+        Returns the total count of objects of current model.
+        If the counter is not persisted as a QuerySet instance attr,
+        a new request is performed to the API in order to get it.
+        """
+        # for example: api_client.get_people()['count']
+        return getattr(api_client, 'get_{}'.format(self.RESOURCE_NAME))()['count'] 
 '''
+class PeopleQuerySet(BaseQuerySet):
+    RESOURCE_NAME = 'people'
+
+    def __init__(self):
+        self.parent = People
+        super(PeopleQuerySet, self).__init__()
+
+    def __repr__(self):
+        return 'PeopleQuerySet: {0} objects'.format(str(len(self.objects)))
+
+
+class FilmsQuerySet(BaseQuerySet):
+    RESOURCE_NAME = 'films'
+
+    def __init__(self):
+        self.parent = Films
+        super(FilmsQuerySet, self).__init__()
+
+    def __repr__(self):
+        return 'FilmsQuerySet: {0} objects'.format(str(len(self.objects)))
